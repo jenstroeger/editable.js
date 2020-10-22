@@ -88,7 +88,7 @@ export default class Highlighting {
 
   onChange (editableHost) {
     if (this.config.checkOnChange) {
-      this.editableHasChanged(editableHost, this.config.throttle)
+      this.editableHasChanged(editableHost, this.config.throttle, true)
     }
     if (this.config.removeOnCorrection) {
       this.removeHighlightsAtCursor(editableHost)
@@ -98,13 +98,13 @@ export default class Highlighting {
   // Manage Highlights
   // -----------------
 
-  editableHasChanged (editableHost, throttle) {
+  editableHasChanged (editableHost, throttle, raiseEvents) {
     if (this.timeout.id && this.timeout.editableHost === editableHost) {
       clearTimeout(this.timeout.id)
     }
 
     const timeoutId = setTimeout(() => {
-      this.highlight(editableHost)
+      this.highlight(editableHost, raiseEvents)
 
       this.timeout = {}
     }, throttle || 0)
@@ -115,7 +115,7 @@ export default class Highlighting {
     }
   }
 
-  highlight (editableHost) {
+  highlight (editableHost, raiseEvents) {
     let text = highlightText.extractText(editableHost)
 
     // getSpellcheck
@@ -133,14 +133,14 @@ export default class Highlighting {
       matches = this.whitespace.findMatches(text)
       matchCollection.addMatches('whitespace', matches)
 
-      this.safeHighlightMatches(editableHost, matchCollection.matches)
+      this.safeHighlightMatches(editableHost, matchCollection.matches, raiseEvents)
     })
 
   }
 
   // Calls highlightMatches internally but ensures
   // that the selection stays the same
-  safeHighlightMatches (editableHost, matches) {
+  safeHighlightMatches (editableHost, matches, raiseEvents) {
     const selection = this.editable.getSelection(editableHost)
     if (selection) {
       selection.retainVisibleSelection(() => {
@@ -148,6 +148,9 @@ export default class Highlighting {
       })
     } else {
       this.highlightMatches(editableHost, matches)
+    }
+    if (this.editable.dispatcher && raiseEvents) {
+      this.editable.dispatcher.notify('htmlchange', editableHost)
     }
   }
 
